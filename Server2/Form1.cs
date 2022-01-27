@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading;
 using System.IO;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Server2
 {
@@ -80,21 +81,22 @@ namespace Server2
 			await Task.Run(() =>
 			{
 				byte[] Buffer/* = Encoding.UTF8.GetBytes("Hello world!")*/;
-				Buffer = new byte[4092];
-				int countbyte;
+				Buffer = new byte[256];
+				int countbyteInt;
 				string StrBuffer;
 
 				string[] CheckNameCountFileStr;
-				//FileStream file1 = null;
+				string CheckNameCountFileStr2;
+				FileStream file1 = null;
 				try
 				{
 					while (tcpClient.Connected)
 					{
 						StrBuffer = null;
-						countbyte = netstream.Read(Buffer, 0, Buffer.Length);
+						countbyteInt = tcpClient.Client.Receive(Buffer, 0, Buffer.Length, SocketFlags.None);
 
-						StrBuffer = Encoding.UTF8.GetString(Buffer, 0, countbyte);
-						if (countbyte == 0 && StrBuffer.Length == 0 && Buffer[0] == 0)
+						StrBuffer = Encoding.UTF8.GetString(Buffer, 0, countbyteInt);
+						if (countbyteInt == 0 && StrBuffer.Length == 0 && Buffer[0] == 0)
 						{
 							ClientCount--;
 							TcpClientsss[ClientCount] = null;
@@ -102,35 +104,54 @@ namespace Server2
 							break;
 						}
 
-						CheckNameCountFileStr = StrBuffer.Split(' ');
+						MatchCollection a = Regex.Matches(StrBuffer, "▲FILE▲");
 
-						FileStream file1 = null;
+						//string A = Regex.Split();
+						//if (a.Count == 2)
+						//{
+						//}
+							//CheckNameCountFileStr[0] = " ";
+
+							//FileStream file1 = null;
 						string AcceptedFiles = @"Accepted files\";
 						string NameFileStr;
-						NameFileStr = ParseNameFile(CheckNameCountFileStr);
+						string newBufferStr;
 						int CountInt;
-						if (StrBuffer.Length > 0 && Equals(CheckNameCountFileStr[0], "▲FILE▲"))
+						if (StrBuffer.Length > 0 && a.Count == 2)
 						{
+							CheckNameCountFileStr2 = StrBuffer.Remove(0, a[0].Index + a[0].Length);
+							newBufferStr = CheckNameCountFileStr2.Remove(a[1].Index - a[0].Length, a[0].Length);
+							CheckNameCountFileStr2 = CheckNameCountFileStr2.Remove(a[1].Index - a[0].Length);
+
+							CheckNameCountFileStr = CheckNameCountFileStr2.Split(' ');
+							NameFileStr = ParseNameFile(CheckNameCountFileStr);
 							CountInt = Convert.ToInt32(CheckNameCountFileStr[CheckNameCountFileStr.Length - 1]);
 
 							if (!Directory.Exists(AcceptedFiles))
 							{
 								Directory.CreateDirectory(AcceptedFiles);
 							}
-                            FileStream file2;
-                            file2 = File.Create(AcceptedFiles + NameFileStr);
-                            file2.Close();
+							FileStream file2;
+							file2 = File.Create(AcceptedFiles + NameFileStr);
+							byte[] newBuffer = Encoding.UTF8.GetBytes(newBufferStr);
+
+							if (newBufferStr.Length >= a[1].Index + a[1].Length)
+							{
+								file2.Write(newBuffer, 0, newBuffer.Length);
+							}
+							file2.Close();
 							file1 = File.OpenWrite(AcceptedFiles + NameFileStr);
 
-                            int CountIntWrite = 0;
+							int CountIntWrite = 0;
 							int CountInTheFileInt = 0;
+							int CountInTheSecondInt = 0;
+
 							Stopwatch stopwatch = new Stopwatch();
+							//Stopwatch BPSStopWatch = new Stopwatch();
 							SocketError se;
 
 							byte[] BufferForFile = new byte[5242880];
 							//BinaryReader a = new BinaryReader(netstream);
-
-							Stopwatch BPSStopWatch = new Stopwatch();
 							while (file1.Length < CountInt)
 							{
 								//tcpClient.Client.ReceiveBufferSize = 22888;
@@ -138,38 +159,38 @@ namespace Server2
 								//CountIntWrite = a.Read(BufferForFile, 0, CountInt);
 								//CountIntWrite = netstream.Read(BufferForFile, 0, CountInt);
 
-								Invoke(new Action(()=> label5.Text = BPSStopWatch.Elapsed.ToString()));
-								BPSStopWatch.Reset();
 								CountIntWrite = tcpClient.Client.Receive(BufferForFile, 0, 5242880, SocketFlags.None, out se);
-								BPSStopWatch.Start();
-
-                                byte[] b = { BufferForFile[CountIntWrite - 3], BufferForFile[CountIntWrite - 2], BufferForFile[CountIntWrite - 1] };
-								if (Encoding.UTF8.GetString(b) == "▼")
-								{
-									MessageBox.Show("is end");
-									BufferForFile.ToList().RemoveAt(CountIntWrite - 3);
-									BufferForFile.ToList().RemoveAt(CountIntWrite - 2);
-									BufferForFile.ToList().RemoveAt(CountIntWrite - 1);
-								}
+								//_ = Encoding.UTF8.GetString(BufferForFile, 0, 256);
+								//BPSStopWatch.Start();
 
 								stopwatch.Start();
 								Invoke(new Action(() => textBox2.Text += " " + CountIntWrite));
 								Invoke(new Action(() => textBox2.SelectionStart = textBox2.Text.Length));
 								file1.Write(BufferForFile, 0, CountIntWrite);
 								CountInTheFileInt += CountIntWrite;
-
+								CountInTheSecondInt += CountInTheFileInt;
 								file1.Close();
+								Invoke(new Action(() =>
+								{
+									textBox4.Text = (CountInTheFileInt / 1024.0 / 1024.0 / stopwatch.Elapsed.TotalSeconds).ToString("0.00"); // Скорость в секунду MB/s
+									textBox5.Text = ((CountInt - CountInTheFileInt) / 1024.0 / 1024.0).ToString("0.000"); // Сколько осталось MB
+									textBox6.Text = stopwatch.Elapsed.TotalSeconds.ToString("0.00"); // Секунд прошло
+
+									label5.Text = ((int)(((CountInt - CountInTheFileInt) / 1024.0 / 1024.0) / (CountInTheFileInt / 1024.0 / 1024.0 / stopwatch.Elapsed.TotalSeconds))).ToString(); // Сколько времени осталось
+									//BPSStopWatch.Reset();
+								}));
+
 								file1 = File.Open(AcceptedFiles + NameFileStr, FileMode.Append);
 
-								int Propgress1;
+								double Propgress1;
 								try
 								{
-									Propgress1 = 100 / (CountInt / ((int)file1.Length));
-									Invoke(new Action(() => progressBar1.Value = Propgress1));
+									Propgress1 = 100 / (CountInt / (double)CountInTheFileInt);
+									Invoke(new Action(() => progressBar1.Value = (int)Propgress1));
 								}
 								catch (System.DivideByZeroException)
 								{
-									Invoke(new Action(() => progressBar1.Value = 100));
+									Invoke(new Action(() => progressBar1.Value = 20));
 								}
 
 								if (stopwatch.Elapsed.TotalMinutes > 60)
@@ -177,20 +198,10 @@ namespace Server2
 									MessageBox.Show("Принятие файла затянулось > 60 минут");
 									break;
 								}
-								//BufferForFile = new byte[1];
-								BPSStopWatch.Stop();
-							}
-							byte[] IsEnd = new byte[3];
-							tcpClient.Client.Receive(IsEnd, 0, 3, SocketFlags.None, out se);
-							if (Encoding.UTF8.GetString(IsEnd, 0, IsEnd.Length) == "▼")
-							{
-								MessageBox.Show("▼");
-							}
-							else
-							{
-								MessageBox.Show(Encoding.UTF8.GetString(IsEnd, 0, IsEnd.Length));
-							}
 
+								//BPSStopWatch.Stop();
+							}
+							
 							stopwatch.Stop();
 							//Array.Clear(BufferForFile, 0, BufferForFile.Length);
 							//GC.Collect();
@@ -207,7 +218,8 @@ namespace Server2
 								}
 							}
 							ReadLog("Файл принят: " + NameFileStr);
-							MessageBox.Show("Файл принят: " + NameFileStr + ". Файл принят за " + stopwatch.Elapsed.Minutes.ToString() + " минут " + stopwatch.Elapsed.Seconds.ToString() + " секунд " + stopwatch.Elapsed.Milliseconds.ToString() + " миллисекунд");
+
+							//MessageBox.Show("Файл принят: " + NameFileStr + ". Файл принят за " + stopwatch.Elapsed.Minutes.ToString() + " минут " + stopwatch.Elapsed.Seconds.ToString() + " секунд " + stopwatch.Elapsed.Milliseconds.ToString() + " миллисекунд");
 						}
 						else
 						{
@@ -216,12 +228,12 @@ namespace Server2
 						}
 
 						Thread.Sleep(1);
-						Buffer = new byte[4092];
+						Buffer = new byte[256];
 					}
 				}
 				catch (System.IO.IOException ex)
 				{
-					//file1.Close();
+					file1.Close();
 					ClientCount--;
 					TcpClientsss[ClientCount].Dispose();
 					TcpClientsss[ClientCount].Close();
@@ -233,7 +245,7 @@ namespace Server2
 		string ParseNameFile(string[] File)
 		{
 			List<string> FileList = File.ToList();
-			FileList.RemoveAt(0);
+			//FileList.RemoveAt(0);
 			FileList.RemoveAt(FileList.Count - 1);
 			File = FileList.ToArray();
 
@@ -328,28 +340,36 @@ namespace Server2
 					}
 
 				}
-					
-				if (tcpListener != null)
-				{
-					tcpClient = tcpListener.AcceptTcpClient();
-					for (int i = 0; i < TcpClientsss.Length; i++)
-					{
-						if (TcpClientsss[i] == null)
-						{
-							TcpClientsss[i] = tcpClient;
-							break;
-						}
-					}
-					thread = new Thread(ThreadClient);
-					thread.IsBackground = true;
 
-					thread.Start(tcpClient);
-					Thread.Sleep(100);
-				}
-				else
+				try
 				{
-					break;
+					if (tcpListener != null)
+					{
+						tcpClient = tcpListener.AcceptTcpClient();
+						for (int i = 0; i < TcpClientsss.Length; i++)
+						{
+							if (TcpClientsss[i] == null)
+							{
+								TcpClientsss[i] = tcpClient;
+								break;
+							}
+						}
+						thread = new Thread(ThreadClient);
+						thread.IsBackground = true;
+
+						thread.Start(tcpClient);
+						Thread.Sleep(100);
+					}
+					else
+					{
+						break;
+					}
 				}
+				catch (InvalidOperationException)
+				{
+					Application.Exit();
+				}
+				
 			}
 		}
 		void IpChangeBox()
@@ -682,7 +702,7 @@ namespace Server2
 				{
 					try
 					{
-						CheckNameCountFileByte = Encoding.UTF8.GetBytes("▲FILE▲ \"" + CurretNameFile + "\" " + LENGHTfileStr);
+						CheckNameCountFileByte = Encoding.UTF8.GetBytes("▲FILE▲\"" + CurretNameFile + "\" " + LENGHTfileStr + "▲FILE▲");
 						break;
 					}
 					catch (System.IO.IOException ex)
@@ -698,8 +718,8 @@ namespace Server2
 				{
 					if (TcpClientsss[i] != tcpclientSender && TcpClientsss[i] != null && TcpClientsss[i].Connected)
 					{
-						TcpClientsss[i].GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
-						TcpClientsss[i].Client.SendFile(FileSend);
+						//TcpClientsss[i].GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
+						TcpClientsss[i].Client.SendFile(FileSend, CheckNameCountFileByte, null, TransmitFileOptions.UseDefaultWorkerThread);
 					}
 				}
 				Thread.Sleep(1);
