@@ -119,12 +119,13 @@ namespace ClientGUITest2
 				filestream.Close();
 
 				CurretNameFile = ParseNameFile();
-				byte[] CheckNameCountFileByte = Encoding.UTF8.GetBytes("▲FILE▲ \"" + CurretNameFile + "\" " + LENGHTfileStr);
-				string TestStr = Encoding.UTF8.GetString(CheckNameCountFileByte);
+				byte[] CheckNameCountFileByte = Encoding.UTF8.GetBytes(("▲FILE▲\"" + CurretNameFile + "\" " + LENGHTfileStr + "▲FILE▲"));
+
+                string TestStr = Encoding.UTF8.GetString(CheckNameCountFileByte);
 				Invoke(new Action(() => richTextBox3.Text = CurretNameFile));
 				Invoke(new Action(() => richTextBox3.SelectionStart = richTextBox3.Text.Length));
 				
-				MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
+				//MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
 				Thread.Sleep(1);
 
                 //byte[] FILEbyte = File.ReadAllBytes(FileSend);
@@ -134,11 +135,20 @@ namespace ClientGUITest2
                 //i += 8192;
                 //}
 
-                MycLIENT.CurreTcpclient.Client.SendFile(FileSend);
-				Thread.Sleep(500);
-				MycLIENT.CurreTcpclient.GetStream().Write(Encoding.UTF8.GetBytes("▼"), 0, 3);
+                try
+                {
+					MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
+					//Task.Delay(1000);
+	                MycLIENT.CurreTcpclient.Client.SendFile(FileSend, null, null, TransmitFileOptions.UseDefaultWorkerThread);
+					ReadLog("Файл отправлен: " + CurretNameFile);
+                }
+                catch (SocketException)
+                {
+					ReadLog("Сбой при отправке файла: " + CurretNameFile);
+                }
+				//Thread.Sleep(500);
+				//MycLIENT.CurreTcpclient.GetStream().Write(Encoding.UTF8.GetBytes("▼"), 0, 3);
 
-                ReadLog("Файл отправлен: " + CurretNameFile);
 			});
 		}
 		string ParseNameFile()
@@ -429,13 +439,13 @@ namespace ClientGUITest2
 						}
 						Buffer = new byte[4092];
 					}
-					MessageBox.Show("Сервер закрылся КОД:2");
-					Application.Exit();
+					//MessageBox.Show("Сервер закрылся КОД:2");
+					Application.Restart();
 				}
 				catch (System.IO.IOException ex)
 				{
+					Application.Restart();
 					MessageBox.Show("Сервер закрылся КОД:1. сообщение:\n" + ex.Message);
-					Application.Exit();
 				}
 
 			});
