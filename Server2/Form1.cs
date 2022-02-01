@@ -198,7 +198,7 @@ namespace Server2
                                     break;
                                 }
 
-                                //BPSStopWatch.Stop();.
+                                //BPSStopWatch.Stop();
                             }
 
                             stopwatch.Stop();

@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading;
 using System.IO;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace ClientGUITest2
 {
@@ -50,7 +51,7 @@ namespace ClientGUITest2
 			await Task.Run(() =>
 			{
 				Invoke(new Action(() => pictureBox3.Visible = true));
-				Invoke(new Action(() => BufferForSend = Encoding.UTF8.GetBytes(richTextBox2.Text)));
+				Invoke(new Action(() => BufferForSend = Encoding.UTF8.GetBytes("▲TEXT▲" + richTextBox2.Text + "▲TEXT▲")));
 				MycLIENT.CurreTcpclient.GetStream().Write(BufferForSend, 0, BufferForSend.Length);
 				Invoke(new Action(() => pictureBox3.Visible = false));
 				Invoke(new Action(() =>
@@ -121,31 +122,39 @@ namespace ClientGUITest2
 				CurretNameFile = ParseNameFile();
 				byte[] CheckNameCountFileByte = Encoding.UTF8.GetBytes(("▲FILE▲\"" + CurretNameFile + "\" " + LENGHTfileStr + "▲FILE▲"));
 
-                string TestStr = Encoding.UTF8.GetString(CheckNameCountFileByte);
+				string TestStr = Encoding.UTF8.GetString(CheckNameCountFileByte);
 				Invoke(new Action(() => richTextBox3.Text = CurretNameFile));
 				Invoke(new Action(() => richTextBox3.SelectionStart = richTextBox3.Text.Length));
 				
 				//MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
 				Thread.Sleep(1);
 
-                //byte[] FILEbyte = File.ReadAllBytes(FileSend);
-                //for (int i = 0; i < FILEbyte.Length;)
-                //{
-                //MycLIENT.CurreTcpclient.GetStream().Write(FILEbyte, 0, 8192);
-                //i += 8192;
-                //}
+				//byte[] FILEbyte = File.ReadAllBytes(FileSend);
+				//for (int i = 0; i < FILEbyte.Length;)
+				//{
+				//MycLIENT.CurreTcpclient.GetStream().Write(FILEbyte, 0, 8192);
+				//i += 8192;
+				//}
 
-                try
-                {
+				try
+				{
 					MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
 					//Task.Delay(1000);
-	                MycLIENT.CurreTcpclient.Client.SendFile(FileSend, null, null, TransmitFileOptions.UseDefaultWorkerThread);
+					MycLIENT.CurreTcpclient.Client.SendFile(FileSend, null, null, TransmitFileOptions.UseDefaultWorkerThread);
 					ReadLog("Файл отправлен: " + CurretNameFile);
-                }
-                catch (SocketException)
-                {
-					ReadLog("Сбой при отправке файла: " + CurretNameFile);
-                }
+				}
+				catch (Exception ex)
+				{
+					if (ex is SocketException || ex is IOException)
+					{
+						ReadLog("Сбой при отправке файла: " + CurretNameFile);
+                    }
+                    else
+                    {
+						throw;
+                    }
+					//Application.Restart();
+				}
 				//Thread.Sleep(500);
 				//MycLIENT.CurreTcpclient.GetStream().Write(Encoding.UTF8.GetBytes("▼"), 0, 3);
 
@@ -188,10 +197,10 @@ namespace ClientGUITest2
 				this.Text += " — " + Directory.GetCurrentDirectory();
 			}
 			if(Properties.Settings.Default.SavedIP.Length > 0)
-            {
+			{
 				textBox1.Text = Properties.Settings.Default.SavedIP;
 				textBox2.Text = Properties.Settings.Default.SavedPORT;
-            }
+			}
 		}
 
 		private void button3_Click(object sender, EventArgs e)
@@ -200,6 +209,7 @@ namespace ClientGUITest2
 			{
 				button4.Enabled = true;
 				FileSend = openFileDialog1.FileName;
+
 				richTextBox3.Text = FileSend;
 				richTextBox3.SelectionStart = richTextBox3.TextLength;
 				ActiveControl = richTextBox3;
@@ -240,12 +250,12 @@ namespace ClientGUITest2
 		{
 		}
 
-        private void ClientGUITest2_FormClosing(object sender, FormClosingEventArgs e)
-        {
+		private void ClientGUITest2_FormClosing(object sender, FormClosingEventArgs e)
+		{
 			Properties.Settings.Default.Save();
-        }
-    }
-    class MyClient
+		}
+	}
+	class MyClient
 	{
 		public static string error = "Не удается прочитать данные из транспортного соединения: Попытка установить соединение была безуспешной," +
 			" т.к. от другого компьютера за требуемое время не получен нужный отклик," +
@@ -331,7 +341,7 @@ namespace ClientGUITest2
 					formmm1.Invoke(new Action(() => formmm1.label4.Visible = false));
 					formmm1.Invoke(new Action(() => formmm1.pictureBox4.Visible = true));
 					tcpClient.Connect(iP, port);
-					ThreadAcceptSend(tcpClient);
+					ThreadAcceptMessage(tcpClient);
 					Console.Beep(4000, 150);
 
 					Properties.Settings.Default.SavedIP = formmm1.textBox1.Text;
@@ -370,12 +380,14 @@ namespace ClientGUITest2
 			//threadForAcceptSend.Start(tcpClient);
 		}
 
-		async public static void ThreadAcceptSend(object StateInfo)
+		async public static void ThreadAcceptMessage(object StateInfo)
 		{
 			TcpClient tcpClient = (TcpClient)StateInfo;
 			byte[] Buffer = new byte[256];
 			string[] CheckNameCountFileStr;
+			string CheckNameCountFileStr2;
 			string StrBuffer;
+			FileStream file1 = null;
 
 			int CountByte;
 			await Task.Run(() =>
@@ -384,75 +396,211 @@ namespace ClientGUITest2
 				{
 					while (true)
 					{
+						CheckNameCountFileStr = null;
+						CheckNameCountFileStr2 = null;
+
 						StrBuffer = null;
-						CountByte = tcpClient.GetStream().Read(Buffer, 0, Buffer.Length);
+						CountByte = tcpClient.Client.Receive(Buffer, 0, Buffer.Length, SocketFlags.None);
 						StrBuffer = Encoding.UTF8.GetString(Buffer, 0, CountByte);
-						CheckNameCountFileStr = StrBuffer.Split(' ');
+						//CheckNameCountFileStr = StrBuffer.Split(' ');
 
 						if (CountByte == 0 && StrBuffer.Length == 0 && Buffer[0] == 0)
 						{
 							break;
 						}
+						MatchCollection FileReceived = Regex.Matches(StrBuffer, "▲FILE▲");
+						MatchCollection TextReceived = Regex.Matches(StrBuffer, "▲TEXT▲");
+
 						string NameFileStr;
 						int CountInt;
+						string newBufferStr;
+						const string AcceptedFiles = @"Accepted files\";
 
-						if (Buffer.Length > 0 && Equals(CheckNameCountFileStr[0], "▲FILE▲"))
+						if (StrBuffer.Length > 0 && Buffer.Length > 0 && FileReceived.Count == 2)
 						{
+							CheckNameCountFileStr2 = StrBuffer.Remove(0, FileReceived[0].Index + FileReceived[0].Length);
+							//newBufferStr = CheckNameCountFileStr2.Remove(FileReceived[1].Index - FileReceived[0].Length, FileReceived[0].Length);
+							CheckNameCountFileStr2 = CheckNameCountFileStr2.Remove(FileReceived[1].Index - FileReceived[0].Length);
+							newBufferStr = CheckNameCountFileStr2.Remove(0, CheckNameCountFileStr2.Length);
+
+							CheckNameCountFileStr = CheckNameCountFileStr2.Split(' ');
 							NameFileStr = ParseNameFile(CheckNameCountFileStr);
 							CountInt = Convert.ToInt32(CheckNameCountFileStr[CheckNameCountFileStr.Length - 1]);
 
-							string AcceptedFiles = @"Accepted files\";
 							if (!Directory.Exists(AcceptedFiles))
 							{
 								Directory.CreateDirectory(AcceptedFiles);
 							}
-							FileStream file1 = File.Create(AcceptedFiles + NameFileStr);
-							file1.Close();
+							byte[] newBuffer = Encoding.UTF8.GetBytes(newBufferStr);
+
+							FileStream file2 = File.Create(AcceptedFiles + NameFileStr);
+							//if (newBuffer.Length > FileReceived[1].Index + FileReceived[1].Length)
+							if (newBuffer.Length > 0)
+							{
+								file2.Write(newBuffer, 0, newBuffer.Length);
+								formmm1.Invoke(new Action(() => formmm1.textBox3.Text += " " + newBuffer.Length));
+								formmm1.Invoke(new Action(() => formmm1.textBox3.SelectionStart = formmm1.textBox3.Text.Length));
+							}
+							file2.Close();
 							file1 = File.OpenWrite(AcceptedFiles + NameFileStr);
 
+							bool bo = true;
+
 							int CountIntWrite;
+							int CountInTheFileInt = 0;
 							Stopwatch stopwatch = new Stopwatch();
+							byte[] BufferForFile = new byte[5242880];
+							double Propgress1 = 0;
 							while (file1.Length < CountInt)
 							{
-								byte[] BufferForFile = new byte[CountInt];
-								CountIntWrite = tcpClient.GetStream().Read(BufferForFile, 0, CountInt);
+								CountIntWrite = tcpClient.Client.Receive(BufferForFile, 0, 5242880, SocketFlags.None);
 								stopwatch.Start();
 								formmm1.Invoke(new Action(() => formmm1.textBox3.Text += " " + CountIntWrite));
 								formmm1.Invoke(new Action(() => formmm1.textBox3.SelectionStart = formmm1.textBox3.Text.Length));
+
 								file1.Write(BufferForFile, 0, CountIntWrite);
+
+								CountInTheFileInt += CountIntWrite;
+								file1.Close();
+								formmm1.Invoke(new Action(() =>
+								{
+									if (bo)
+									{
+										double aa = GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds);
+										formmm1.label7.Text = aa.ToString("0.0");
+										bo = false;
+									}
+									if (GetKBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds) >= 1000)
+									{
+										formmm1.label5.Text = ((int)GetMBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString() + " МБ/с ꟷ " + ((GetMBInTheFile(CountInTheFileInt))).ToString("0.0") + "/" + ((CountInt / 1024.0 / 1024.0)).ToString("0.0") + " МБ, осталось " + (GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString("0.0") + " сек.";
+									}
+									else
+									{
+										formmm1.label5.Text = ((int)GetKBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString() + " КБ/с ꟷ " + ((GetMBInTheFile(CountInTheFileInt))).ToString("0.0") + "/" + ((CountInt / 1024.0 / 1024.0)).ToString("0.0") + " МБ, осталось " + (GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString("0.0") + " сек.";
+									}
+									if (stopwatch.Elapsed.TotalMinutes >= 1)
+									{
+										formmm1.label6.Text = "Минут прошло:" + stopwatch.Elapsed.TotalMinutes.ToString("0.0");
+									}
+									else if(stopwatch.Elapsed.TotalMinutes < 1)
+									{
+										formmm1.label6.Text = "Секунд прошло:" + stopwatch.Elapsed.TotalSeconds.ToString("0.0");
+									}
+									//textBox6.Text = stopwatch.Elapsed.TotalSeconds.ToString("0.0"); // Секунд прошло
+									//formmm1.label6.Text = (CountInTheFileInt / 1024.0/* / 1024.0*/ / stopwatch.Elapsed.TotalSeconds).ToString("0000") + " КБ/с"; // Скорость в секунду MB/s
+									//label5.Font = Control.DefaultFont;
+									//formmm1.label7.Text = " ꟷ " + ((/*CountInt - */CountInTheFileInt) / 1024.0 / 1024.0).ToString("0.000") + "/МБ,"; // Сколько осталось MB
+									//formmm1.label8.Text = "осталось " + ((int)(((CountInt - CountInTheFileInt) / 1024.0 / 1024.0) / (CountInTheFileInt / 1024.0 / 1024.0 / stopwatch.Elapsed.TotalSeconds))).ToString() + "сек."; // Сколько времени осталось
+								}));
+
+
+								try
+								{
+									Propgress1 = 100 / (CountInt / (double)CountInTheFileInt);
+									formmm1.Invoke(new Action(() =>
+									{
+										formmm1.progressBar1.Value = (int)Propgress1;
+										formmm1.label10.Text = ((int)Propgress1).ToString() + "%";
+									}));
+								}
+								catch (System.Exception ex)
+								{
+									if (ex is DivideByZeroException)
+									{
+										formmm1.Invoke(new Action(() => formmm1.progressBar1.Value = (int)Propgress1));
+									}
+									else if (ex is System.ArgumentOutOfRangeException)
+									{
+										byte[] BufferForError = Encoding.UTF8.GetBytes("▲TEXT▲" + "Не нажимай на кнопку отправить файл несколько раз, пока файл не пришел!" + "▲TEXT▲");
+										tcpClient.GetStream().Write(BufferForError, 0, BufferForError.Length);
+										formmm1.Invoke(new Action(() =>
+										{
+											formmm1.progressBar1.Value = 0;
+											formmm1.label10.Text = 0.ToString() + "%";
+										}));
+									}
+									else
+									{
+										throw;
+									}
+								}
 
 								if (stopwatch.Elapsed.TotalMinutes > 60)
 								{
 									MessageBox.Show("Отправка файла затянулась > 60 минут");
+									file1.Close();
 									break;
 								}
+								file1 = File.Open(AcceptedFiles + NameFileStr, FileMode.Append);
 							}
 							stopwatch.Stop();
 							formmm1.ReadLog("Файл принят: " + NameFileStr);
-							MessageBox.Show("Файл принят за " + stopwatch.Elapsed.Minutes.ToString() + " минут " + stopwatch.Elapsed.Seconds.ToString() + " секунд " + stopwatch.Elapsed.Milliseconds.ToString() + " миллисекунд");
+							//MessageBox.Show("Файл принят за " + stopwatch.Elapsed.Minutes.ToString() + " минут " + stopwatch.Elapsed.Seconds.ToString() + " секунд " + stopwatch.Elapsed.Milliseconds.ToString() + " миллисекунд");
 							file1.Close();
+						}
+						else if(StrBuffer.Length > 0 && TextReceived.Count == 2)
+						{
+							CheckNameCountFileStr2 = StrBuffer.Remove(0, TextReceived[0].Index + TextReceived[0].Length);
+							newBufferStr = CheckNameCountFileStr2.Remove(TextReceived[1].Index - TextReceived[0].Length, TextReceived[0].Length);
+
+							formmm1.Invoke(new Action(() => formmm1.richTextBox1.Text = newBufferStr));
+							formmm1.ReadLog(StrBuffer);
 						}
 						else
 						{
-							formmm1.ReadLog(StrBuffer);
-							formmm1.Invoke(new Action(() => formmm1.richTextBox1.Text = StrBuffer));
+							Exception se = new Exception("KTOTO HE TTPABUJLHO UCTTOJLSYET TTPOrPAMMY");
+
+							throw se;
 						}
-						Buffer = new byte[4092];
+						Buffer = new byte[256];
 					}
-					//MessageBox.Show("Сервер закрылся КОД:2");
+					MessageBox.Show("Сервер закрылся КОД:2");
 					Application.Restart();
 				}
-				catch (System.IO.IOException ex)
+				catch (Exception ex)
 				{
-					Application.Restart();
-					MessageBox.Show("Сервер закрылся КОД:1. сообщение:\n" + ex.Message);
+					if (ex is IOException || ex is SocketException || ex.Message == "KTOTO HE TTPABUJLHO UCTTOJLSYET TTPOrPAMMY")
+					{
+						if(file1 != null)
+						{
+							file1.Close();
+						}
+						MessageBox.Show("Сервер закрылся КОД:1. сообщение:\n" + ex.Message);
+						Application.Restart();
+					}
+					else
+					{
+						throw;
+					}
 				}
 
 			});
+			
+			double GetMBPerSecond(int CountInTheFileInt, double TotalSeconds)
+			{
+				return (CountInTheFileInt / 1024.0 / 1024.0 / TotalSeconds);
+			}
+			double GetKBPerSecond(int CountInTheFileInt, double TotalSeconds)
+			{
+				return (CountInTheFileInt / 1024.0 / TotalSeconds);
+			}
+			double GetMBInTheFile(int CountInTheFileInt)
+			{
+				return ((CountInTheFileInt) / 1024.0 / 1024.0);
+			}
+			double GetKBInTheFile(int CountInTheFileInt)
+			{
+				return ((CountInTheFileInt) / 1024.0);
+			}
+			double GetLastSeconds(int CountInt, int CountInTheFileInt, double TotalSeconds)
+			{
+				return (int)(GetKBInTheFile(CountInt - CountInTheFileInt)) / GetKBPerSecond(CountInTheFileInt, TotalSeconds);
+			}
+
 			string ParseNameFile(string[] File)
 			{
 				List<string> FileList = File.ToList();
-				FileList.RemoveAt(0);
+				//FileList.RemoveAt(0);
 				FileList.RemoveAt(FileList.Count - 1);
 				File = FileList.ToArray();
 
@@ -465,6 +613,22 @@ namespace ClientGUITest2
 				NameFile = NameFile.Remove(NameFile.Length - 1, 1);
 				return NameFile;
 			}
+			//string ParseNameFile(string[] File)
+			//{
+			//	List<string> FileList = File.ToList();
+			//	FileList.RemoveAt(0);
+			//	FileList.RemoveAt(FileList.Count - 1);
+			//	File = FileList.ToArray();
+
+			//	string NameFile = "";
+			//	for (int i = 0; i < File.Length; i++)
+			//	{
+			//		NameFile = string.Join(" ", File);
+			//	}
+			//	NameFile = NameFile.Remove(0, 1);
+			//	NameFile = NameFile.Remove(NameFile.Length - 1, 1);
+			//	return NameFile;
+			//}
 		}
 	}
 }
