@@ -62,9 +62,14 @@ namespace Server2
             this.label6 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.panel1 = new System.Windows.Forms.Panel();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
+            this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -244,7 +249,7 @@ namespace Server2
             // 
             // timer2
             // 
-            this.timer2.Interval = 3000;
+            this.timer2.Interval = 300;
             this.timer2.Tick += new System.EventHandler(this.timer2_Tick);
             // 
             // textBox2
@@ -254,7 +259,6 @@ namespace Server2
             this.textBox2.Name = "textBox2";
             this.textBox2.Size = new System.Drawing.Size(100, 22);
             this.textBox2.TabIndex = 32;
-            this.textBox2.Text = "Количество принятых байт:";
             // 
             // openFileDialog1
             // 
@@ -267,7 +271,7 @@ namespace Server2
             this.richTextBox3.Name = "richTextBox3";
             this.richTextBox3.ReadOnly = true;
             this.richTextBox3.Size = new System.Drawing.Size(130, 28);
-            this.richTextBox3.TabIndex = 33;
+            this.richTextBox3.TabIndex = 3;
             this.richTextBox3.Text = "";
             // 
             // button2
@@ -343,30 +347,30 @@ namespace Server2
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(515, 308);
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label5.Location = new System.Drawing.Point(596, 399);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(46, 17);
+            this.label5.Size = new System.Drawing.Size(21, 24);
             this.label5.TabIndex = 40;
-            this.label5.Text = "label5";
+            this.label5.Text = "∞";
             // 
             // textBox4
             // 
-            this.textBox4.Location = new System.Drawing.Point(353, 388);
+            this.textBox4.Location = new System.Drawing.Point(326, 391);
             this.textBox4.Name = "textBox4";
             this.textBox4.Size = new System.Drawing.Size(100, 22);
             this.textBox4.TabIndex = 41;
-            this.textBox4.Text = "textBox4";
             // 
             // textBox5
             // 
-            this.textBox5.Location = new System.Drawing.Point(353, 360);
+            this.textBox5.Location = new System.Drawing.Point(326, 363);
             this.textBox5.Name = "textBox5";
             this.textBox5.Size = new System.Drawing.Size(100, 22);
             this.textBox5.TabIndex = 42;
             // 
             // textBox6
             // 
-            this.textBox6.Location = new System.Drawing.Point(353, 334);
+            this.textBox6.Location = new System.Drawing.Point(326, 337);
             this.textBox6.Name = "textBox6";
             this.textBox6.Size = new System.Drawing.Size(100, 22);
             this.textBox6.TabIndex = 43;
@@ -374,35 +378,82 @@ namespace Server2
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(233, 337);
+            this.label6.Font = new System.Drawing.Font("Microsoft YaHei", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label6.ForeColor = System.Drawing.Color.Navy;
+            this.label6.Location = new System.Drawing.Point(188, 337);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(114, 17);
+            this.label6.Size = new System.Drawing.Size(121, 20);
             this.label6.TabIndex = 44;
             this.label6.Text = "Секунд прошло:";
             // 
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(304, 391);
+            this.label7.Font = new System.Drawing.Font("Microsoft YaHei", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label7.ForeColor = System.Drawing.Color.Navy;
+            this.label7.Location = new System.Drawing.Point(262, 391);
             this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(43, 17);
+            this.label7.Size = new System.Drawing.Size(47, 20);
             this.label7.TabIndex = 45;
             this.label7.Text = "MB/s:";
             // 
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(131, 363);
+            this.label8.Font = new System.Drawing.Font("Microsoft YaHei", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label8.ForeColor = System.Drawing.Color.Navy;
+            this.label8.Location = new System.Drawing.Point(92, 363);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(207, 17);
+            this.label8.Size = new System.Drawing.Size(217, 20);
             this.label8.TabIndex = 46;
             this.label8.Text = "Мегабайт осталось загрузить:";
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Font = new System.Drawing.Font("Microsoft YaHei", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label9.ForeColor = System.Drawing.Color.Navy;
+            this.label9.Location = new System.Drawing.Point(107, 418);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(202, 20);
+            this.label9.TabIndex = 47;
+            this.label9.Text = "Количество принятых байт:";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Dock = System.Windows.Forms.DockStyle.Right;
+            this.label10.Location = new System.Drawing.Point(24, 0);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(20, 17);
+            this.label10.TabIndex = 48;
+            this.label10.Text = "%";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(432, 399);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(156, 17);
+            this.label11.TabIndex = 49;
+            this.label11.Text = "Сколько сек осталось:";
+            // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.label10);
+            this.panel1.Location = new System.Drawing.Point(468, 432);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(44, 17);
+            this.panel1.TabIndex = 50;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.panel1);
+            this.Controls.Add(this.label11);
+            this.Controls.Add(this.label9);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.label6);
@@ -440,6 +491,8 @@ namespace Server2
             this.tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).EndInit();
+            this.panel1.ResumeLayout(false);
+            this.panel1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -479,6 +532,10 @@ namespace Server2
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Panel panel1;
     }
 }
 
