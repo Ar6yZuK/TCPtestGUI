@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -25,8 +27,26 @@ namespace Server2
 		public Form1()
 		{
 			InitializeComponent();
+			StartpointPanel2 = panel2.Location;
+			//userControl11.GeneralText.Click += GeneralText1_Click;
+			AllColors = Enum.GetNames(typeof(KnownColor));
+
 			label1.ForeColor = Color.Red;
+			UsersMessages[0] = UserFromMessage;
+			////panel2.AutoScrollMinSize = new Size(0, w[0].Size.Height);
+			//panel2.VerticalScroll.Enabled = false;
+			flowLayoutPanel1.VerticalScroll.LargeChange = UserFromMessage.Height;
+			flowLayoutPanel2.VerticalScroll.LargeChange = UserFromMessage.Height;
+			flowLayoutPanel1.VerticalScroll.SmallChange = UserFromMessage.Height;
+			flowLayoutPanel2.VerticalScroll.SmallChange = UserFromMessage.Height;
+			//panel2.VerticalScroll.Enabled = true;
+			//panel2.MouseWheel += Panel2_MouseWheel1;
+			//vScrollBar1.
+			//panel2.MouseWheel += Panel2_MouseWheel;
+
+			//this.DoubleBuffered = true;
 		}
+
 		TcpClient[] TcpClientsss = new TcpClient[5];
 
 		/// <summary>
@@ -76,6 +96,7 @@ namespace Server2
 		async void AcceptMessage(TcpClient tcpClient)
 		{
 			NetworkStream netstream = tcpClient.GetStream();
+			//HistoryChat.
 
 			await Task.Run(() =>
 			{
@@ -247,8 +268,62 @@ namespace Server2
 						{
 							CheckNameCountFileStr2 = StrBuffer.Remove(0, TextReceived[0].Index + TextReceived[0].Length);
 							newBufferStr = CheckNameCountFileStr2.Remove(TextReceived[1].Index - TextReceived[0].Length, TextReceived[0].Length);
-							richTextBox1.Invoke(new Action(() => richTextBox1.Text = newBufferStr));
-							ReadLog(newBufferStr);
+
+							if (!string.IsNullOrWhiteSpace(newBufferStr))
+							{
+								Invoke(new Action(() => {
+									for (int i = 0; i < UsersMessages.Length; i++)
+									{
+										if (UsersMessages[i] == null)
+										{
+											if (AllColors.Length <= IndexForColor)
+											{
+												IndexForColor = 0;
+											}
+											while (CheckColorNoBlack())
+											{
+												if (AllColors.Length <= IndexForColor)
+												{
+													IndexForColor = 0;
+												}
+												else
+												{
+													IndexForColor++;
+													ColorsSkips++;
+												}
+											}
+											if (AllColors[IndexForColor] == "Transparent")
+												IndexForColor++;
+
+											c = Color.FromName(AllColors[IndexForColor]);
+											IndexForColor++;
+
+											if (UserFromMessage.GetGeneralText.Length == 0)
+											{
+												UserFromMessage.GetGeneralText = newBufferStr;
+												if (UserFromMessage.DateUp)
+												{
+													UserFromMessage.GetIPTextUp = "От: " + ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
+													UserFromMessage.GetDateTimeTextUp = DateTime.Now.ToString();
+												}
+												else if (!UserFromMessage.DateUp)
+												{
+													UserFromMessage.GetIPTextDown = "От: " + ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
+													UserFromMessage.GetDateTimeTextDown = DateTime.Now.ToString();
+												}
+											}
+											else
+											{
+												CreateNewText(flowLayoutPanel2, newBufferStr, "От " + ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address, DateTime.Now, c);
+											}
+											//UserFromMessages[i].GetGeneralText = newBufferStr;
+											break;
+										}
+									}
+								}));
+
+								ReadLog(newBufferStr);
+							}
 						}
 						else
 						{
@@ -323,22 +398,44 @@ namespace Server2
 		}
 		void ThreadServerSendToClient()
 		{
-			byte[] Buffer;
-			for (int i = 0; i < TcpClientsss.Length && TcpClientsss[i] != null; i++)
+			if (!string.IsNullOrWhiteSpace(richTextBox2.Text))
 			{
-				//Buffer = new byte[4092];
-				pictureBox3.Visible = true;
-				Buffer = Encoding.UTF8.GetBytes("▲TEXT▲" + richTextBox2.Text + "▲TEXT▲");
+				byte[] Buffer;
+				for (int i = 0; i < TcpClientsss.Length && TcpClientsss[i] != null; i++)
+				{
+					//Buffer = new byte[4092];
+					pictureBox3.Visible = true;
+					Buffer = Encoding.UTF8.GetBytes("▲TEXT▲" + richTextBox2.Text + "▲TEXT▲");
+					if (UserToMessage.GetGeneralText.Length == 0)
+					{
+						UserToMessage.GetGeneralText = richTextBox2.Text;
+						if (UserToMessage.DateUp)
+						{
+							UserToMessage.GetIPTextUp = "От: " + ((IPEndPoint)TcpClientsss[i].Client.RemoteEndPoint).Address;
+							UserToMessage.GetDateTimeTextUp = DateTime.Now.ToString();
+						}
+						else if (!UserToMessage.DateUp)
+						{
+							UserToMessage.GetIPTextDown = "От: " + ((IPEndPoint)TcpClientsss[i].Client.RemoteEndPoint).Address;
+							UserToMessage.GetDateTimeTextDown = DateTime.Now.ToString();
+						}
+					}
+					else
+					{
+						CreateNewText(flowLayoutPanel1, richTextBox2.Text, "Для: " + ((IPEndPoint)TcpClientsss[i].Client.RemoteEndPoint).Address.ToString(), DateTime.Now, null);
+					}
 
-				TcpClientsss[i].GetStream().Write(Buffer, 0, Buffer.Length);
-				pictureBox3.Visible = false;
-				if (richTextBox2.Text.Length > 0)
-				{
-					pictureBox2.Visible = true;
-				}
-				if (!timer2.Enabled)
-				{
-					timer2.Enabled = true;
+					TcpClientsss[i].GetStream().Write(Buffer, 0, Buffer.Length);
+
+					pictureBox3.Visible = false;
+					if (!string.IsNullOrWhiteSpace(richTextBox2.Text))
+					{
+						pictureBox2.Visible = true;
+					}
+					if (!timer2.Enabled)
+					{
+						timer2.Enabled = true;
+					}
 				}
 			}
 		}
@@ -612,8 +709,8 @@ namespace Server2
 
 			label2.Text += " 0";
 
-			label3.Text = "Здесь приходит текст от клиентов:";
-			label4.Text = "Пиши сюда какой текст ты хочешь отправить клиентам:";
+			//label3.Text = "Здесь приходит текст от клиентов:";
+			//label4.Text = "Пиши сюда какой текст ты хочешь отправить клиентам:";
 			textBox3.Text = comboBox1.Text;
 
 			if (Directory.GetCurrentDirectory() == Environment.GetFolderPath(Environment.SpecialFolder.Desktop) && Directory.GetCurrentDirectory() == Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory))
@@ -628,6 +725,7 @@ namespace Server2
 			{
 				textBox1.Text = Properties.Settings.Default.SavedPORT;
 			}
+
 		}
 
 		private void button3_Click(object sender, EventArgs e)
@@ -691,10 +789,10 @@ namespace Server2
 				CurretNameFile = ParseNameFile();
 
 				//string[] FILES = Directory.GetFileSystemEntries(FileSend);
-	//            if (Directory.Exists(FILES[0]))
-	//            {
+				//            if (Directory.Exists(FILES[0]))
+				//            {
 				//	FILES = Directory.GetFileSystemEntries(FILES[0]);
-	//            }
+				//            }
 
 				FileStream filestream = File.OpenRead(FileSend);
 				string LENGHTfileStr = filestream.Length.ToString();
@@ -794,6 +892,13 @@ namespace Server2
 
 			});
 		}
+		async void SendFilesnDir()
+		{
+			await Task.Run(() =>
+			{
+
+			});
+		}
 		string ParseNameFile(string FileSend)
 		{
 			string FileName = "";
@@ -815,19 +920,7 @@ namespace Server2
 		string FileSend;
 		private void button2_Click(object sender, EventArgs e)
 		{
-			//         openFileDialog1.ValidateNames = false;
-			//         openFileDialog1.CheckFileExists = false;
-			//openFileDialog1.CheckPathExists = true;
-			//         openFileDialog1.FileName = " ";
-
-			if (openFileDialog1.ShowDialog() == DialogResult.OK)
-			{
-				button5.Enabled = true;
-				FileSend = openFileDialog1.FileName.Remove(openFileDialog1.FileName.Length - 1, 1);
-				richTextBox3.Text = FileSend;
-				richTextBox3.SelectionStart = richTextBox3.TextLength;
-				ActiveControl = richTextBox3;
-			}
+			
 		}
 
 		private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -843,13 +936,34 @@ namespace Server2
 		{
 			SendFile();
 		}
-		string[] TEST;
+		//string[] TEST;
 		private void button2_DragDrop(object sender, DragEventArgs e)
 		{
-			TEST = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+			List<string> PathsDirectories = new List<string>();
+			List<string> PathsFiles = new List<string>();
+			foreach (string item in (string[])e.Data.GetData(DataFormats.FileDrop))
+			{
+				if (Directory.Exists(item))
+				{
+					PathsDirectories.AddRange(Directory.GetFiles(item, "*.*", SearchOption.AllDirectories));
+				}
+				else if(File.Exists(item))
+				{
+					PathsFiles.Add(item);
+				}
+			}
+			//TEST = (string[])e.Data.GetData(DataFormats.FileDrop, false);
 
 			button5.Enabled = true;
-			FileSend = TEST[0];
+			if(PathsFiles.Count > 0)
+			{
+				FileSend = string.Join("\r\n", PathsFiles);
+			}
+			if (PathsDirectories.Count > 0)
+			{
+				FileSend = string.Join("\r\n", PathsDirectories);
+			}
+
 			richTextBox3.Text = FileSend;
 			richTextBox3.SelectionStart = richTextBox3.TextLength;
 			ActiveControl = richTextBox3;
@@ -869,6 +983,7 @@ namespace Server2
 
 		private void button2_DragLeave(object sender, EventArgs e)
 		{
+
 		}
 
 		private void checkBox1_CheckedChanged(object sender, EventArgs e)
@@ -889,6 +1004,467 @@ namespace Server2
 		{
 			Properties.Settings.Default.IPComboBoxIndex = comboBox1.SelectedIndex;
 		}
-	}
 
+		//public static T Clone<T>(T controlToClone) where T : Control
+		//{
+		//	T instance = Activator.CreateInstance<T>();
+
+		//	Type control = controlToClone.GetType();
+		//	PropertyInfo[] info = control.GetProperties();
+		//	object p = control.InvokeMember("", System.Reflection.BindingFlags.CreateInstance, null, controlToClone, null);
+		//	foreach (PropertyInfo pi in info)
+		//	{
+		//		if ((pi.CanWrite) && !(pi.Name == "WindowTarget") && !(pi.Name == "Capture"))
+		//		{
+		//			pi.SetValue(instance, pi.GetValue(controlToClone, null), null);
+		//		}
+		//	}
+		//	return instance;
+		//}
+		//      public static T Clone<T>(this T controlToClone) 
+		//	where T : Control
+		//{
+		//	PropertyInfo[] controlProperties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+		//	T instance = Activator.CreateInstance<T>();
+
+		//	foreach (PropertyInfo propInfo in controlProperties)
+		//	{
+		//		if (propInfo.CanWrite)
+		//		{
+		//			if (propInfo.Name != "WindowTarget")
+		//				propInfo.SetValue(instance, propInfo.GetValue(controlToClone, null), null);
+		//		}
+		//	}
+
+		//	return instance;
+		//}
+
+
+		public UserControl1[] UsersMessages = new UserControl1[340];
+		
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="panelToAddIn"></param>
+		/// <param name="Text"></param>
+		/// <param name="iP"></param>
+		/// <param name="DateTimeText"></param>
+		/// <param name="color">Сделайте значение <see langword="null"/>, чтобы получился случайный цвет</param>
+		/// <returns></returns>
+		int CreateNewText(Panel panelToAddIn, string Text, string iP, string DateTimeText, Color? color)
+		{
+			for (int i = 0; i < UsersMessages.Length; i++)
+			{
+				if (UsersMessages[i] == null)
+				{
+					UsersMessages[i] = new UserControl1();
+					UsersMessages[i].DateUp = UsersMessages[0].DateUp;
+					UsersMessages[i].GetGeneralText = Text;
+
+					if (color == null)
+					{
+						if (AllColors.Length <= IndexForColor)
+						{
+							IndexForColor = 0;
+						}
+						while (CheckColorNoBlack())
+						{
+							if (AllColors.Length <= IndexForColor)
+							{
+								IndexForColor = 0;
+							}
+							else
+							{
+								IndexForColor++;
+								ColorsSkips++;
+							}
+						}
+						if (AllColors.Length <= IndexForColor)
+						{
+							IndexForColor = 0;
+						}
+						if (AllColors[IndexForColor] == "Transparent")
+							IndexForColor++;
+						UsersMessages[i].GetGeneralColor = Color.FromName(AllColors[IndexForColor]);
+						IndexForColor++;
+					}
+					else
+					{
+						UsersMessages[i].GetGeneralColor = color.Value;
+					}
+
+					UsersMessages[i].Anchor = UserFromMessage.Anchor;
+					UsersMessages[i].Dock = UserFromMessage.Dock;
+					if (UsersMessages[i].DateUp)
+					{
+						UsersMessages[i].GetIPTextUp = iP;
+						UsersMessages[i].GetDateTimeTextUp = DateTimeText;
+					}
+					else if (!UsersMessages[i].DateUp)
+					{
+						UsersMessages[i].GetIPTextDown = iP;
+						UsersMessages[i].GetDateTimeTextDown = DateTimeText;
+					}
+
+					panelToAddIn.Controls.Add(UsersMessages[i]);
+					UsersMessages[i].Location = new Point(UsersMessages[i - 1].Location.X, UsersMessages[i - 1].Location.Y + UsersMessages[i - 1].Size.Height + 1);
+					panelToAddIn.ScrollControlIntoView(UsersMessages[i]);
+					return i;
+				}
+			}
+			return -1;
+		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="panelToAddIn"></param>
+		/// <param name="Text"></param>
+		/// <param name="iP"></param>
+		/// <param name="DateTime"></param>
+		/// <param name="color">Сделайте значение <see langword="null"/>, чтобы получился случайный цвет</param>
+		/// <returns></returns>
+		int CreateNewText(Panel panelToAddIn, string Text, string iP, DateTime DateTime, Color? color)
+		{
+			for (int i = 0; i < UsersMessages.Length; i++)
+			{
+				if (UsersMessages[i] == null)
+				{
+					UsersMessages[i] = new UserControl1();
+					UsersMessages[i].DateUp = UsersMessages[0].DateUp;
+					UsersMessages[i].GetGeneralText = Text;
+
+					if (color == null)
+					{
+						if (AllColors.Length <= IndexForColor)
+						{
+							IndexForColor = 0;
+						}
+						while (CheckColorNoBlack())
+						{
+							if (AllColors.Length <= IndexForColor)
+							{
+								IndexForColor = 0;
+							}
+							else
+							{
+								IndexForColor++;
+								ColorsSkips++;
+							}
+						}
+						if (AllColors.Length <= IndexForColor)
+						{
+							IndexForColor = 0;
+						}
+						if (AllColors[IndexForColor] == "Transparent")
+							IndexForColor++;
+
+						UsersMessages[i].GetGeneralColor = Color.FromName(AllColors[IndexForColor]);
+						IndexForColor++;
+					}
+					else
+					{
+						UsersMessages[i].GetGeneralColor = color.Value;
+					}
+
+					UsersMessages[i].Anchor = UserFromMessage.Anchor;
+					UsersMessages[i].Dock = UserFromMessage.Dock;
+					if (UsersMessages[i].DateUp)
+					{
+						UsersMessages[i].GetIPTextUp = iP;
+						UsersMessages[i].GetDateTimeTextUp = DateTime.ToString();
+					}
+					else if (!UsersMessages[i].DateUp)
+					{
+						UsersMessages[i].GetIPTextDown = iP;
+						UsersMessages[i].GetDateTimeTextDown = DateTime.ToString();
+					}
+
+					panelToAddIn.Controls.Add(UsersMessages[i]);
+					UsersMessages[i].Location = new Point(UsersMessages[i - 1].Location.X, UsersMessages[i - 1].Location.Y + UsersMessages[i - 1].Size.Height + 1);
+					panelToAddIn.ScrollControlIntoView(UsersMessages[i]);
+					return i;
+				}
+			}
+			return -1;
+		}
+		
+
+		string[] AllColors;
+		int IndexForColor = 0;
+		int ColorsSkips = 0;
+		System.Drawing.Color c;
+		private void button6_Click(object sender, EventArgs e)
+		{
+			//tableFromMessage.RowCount++;
+			//SystemColors.
+			if (AllColors.Length <= IndexForColor)
+			{
+				IndexForColor = 0;
+			}
+			while (CheckColorNoBlack())
+			{
+				if (AllColors.Length <= IndexForColor)
+				{
+					IndexForColor = 0;
+				}
+				else
+				{
+					IndexForColor++;
+					ColorsSkips++;
+				}
+			}
+			if (AllColors.Length <= IndexForColor)
+			{
+				IndexForColor = 0;
+			}
+			if (AllColors[IndexForColor] == "Transparent")
+				IndexForColor++;
+
+			c = Color.FromName(AllColors[IndexForColor]);
+			IndexForColor++;
+
+			CreateNewText(flowLayoutPanel1, string.Concat(Enumerable.Repeat("S", 255)), "Для: " + "255.255.255.255", DateTime.Now.ToString(), c);
+			CreateNewText(flowLayoutPanel2, string.Concat(Enumerable.Repeat("S", 255)), "От:  " + "255.255.255.255", DateTime.Now.ToString(), c);
+
+			//panel2.VerticalScroll.Value = w[0].Size.Height * d;
+		}
+		// Проверяет цвета на черный. Чтобы текст не сливался с фоном
+		bool CheckColorNoBlack()
+		{
+			Color color1 = Color.FromName(AllColors[IndexForColor]);
+			Color color2 = Color.FromArgb(255, 0, 0, 0);
+			return color1.ToArgb() == color2.ToArgb();
+		}
+		Point StartpointPanel2;
+		//async private void flowLayoutPanel1_LocationChanged(object sender, EventArgs e)
+		//{
+		//	//if (this.IsHandleCreated)
+		//	//{
+		//	//	await Task.Run(() =>
+		//	//	{
+		//	//		Invoke(new Action(() =>
+		//	//		{
+		//	//			if (flowLayoutPanel1.Location.X >= StartpointFlow1.X * 2 && !StartpointFlow1.IsEmpty)
+		//	//			{
+		//	//				flowLayoutPanel1.Location = new Point(StartpointFlow1.X * 2, flowLayoutPanel2.Location.Y);
+		//	//			}
+		//	//			else if (flowLayoutPanel1.Location.X <= StartpointFlow1.X && !StartpointFlow1.IsEmpty)
+		//	//			{
+		//	//				flowLayoutPanel1.Location = new Point(StartpointFlow1.X, flowLayoutPanel2.Location.Y);
+		//	//			}
+		//	//		}));
+		//	//	});
+		//	//};
+		//}
+
+		private void flowLayoutPanel2_ControlAdded(object sender, ControlEventArgs e)
+		{
+			if ((panel2.Location.Y < StartpointPanel2.Y + UserFromMessage.Size.Height) && !StartpointPanel2.IsEmpty)
+			{
+				panel2.Location = new Point(panel2.Location.X, panel2.Location.Y + UserFromMessage.Size.Height);
+			}
+			//tableLayoutPanel3.Size = new Size(tableLayoutPanel3.Size.Width, tableLayoutPanel3.Size.Height + UserFromMessage.Height);
+		}
+
+		//async private void label12_LocationChanged(object sender, EventArgs e)
+		//{
+			//if (this.IsHandleCreated && this.WindowState == FormWindowState.Normal || this.WindowState == FormWindowState.Maximized)
+			//{
+			//	await Task.Run(() =>
+			//	{
+			//		Invoke(new Action(() =>
+			//		{
+			//			if(label12.Location.X >= StartpointLabel12.X * 2 && !StartpointLabel12.IsEmpty)
+			//			{
+			//				label12.Location = new Point(StartpointLabel12.X * 2, label3.Location.Y);
+			//			}
+			//			else if(label12.Location.X <= StartpointLabel12.X && !StartpointLabel12.IsEmpty)
+			//			{
+			//				label12.Location = new Point(StartpointLabel12.X, label3.Location.Y);
+			//			}
+			//		}));
+			//	});
+   //         }
+   //         else if(WindowState == FormWindowState.Minimized)
+   //         {
+			//	PosBeforeResize = flowLayoutPanel1.Location;
+   //         }
+		//}
+
+		//private void Form1_Resize(object sender, EventArgs e)
+		//{
+			
+		//}
+
+		//     private void vScrollBar1_Scroll(object sender, ScrollEventArgs e)
+		//     {
+		//int i = w.Count(x => x != null);
+		//int s = i;
+
+		//         //vScrollBar1.SmallChange;
+		//         //vScrollBar1.LargeChange;
+		//     }
+		//void Copy(Control source, Control destination)
+		//{
+		//	var pdc = TypeDescriptor.GetProperties(source);
+
+		//	// Копируем значения всех свойств
+		//	foreach (PropertyDescriptor pd in pdc)
+		//	{
+		//		if (!pd.IsReadOnly)
+		//			pd.SetValue(destination, pd.GetValue(source));
+		//	}
+
+		//	// Создаём копии вложенных контролов и копируем содержания
+		//	foreach (Control ctrl in source.Controls)
+		//	{
+		//		var ctrl2 = (Control)Activator.CreateInstance(ctrl.GetType());
+		//		Copy(ctrl, ctrl2);
+		//		ctrl2.Visible = true;
+		//		destination.Controls.Add(ctrl2);
+		//	}
+		//}
+		
+		///// <summary>
+		///// 
+		///// </summary>
+		///// <param name="panelToAddIn"></param>
+		///// <param name="Text"></param>
+		///// <param name="IP"></param>
+		///// <param name="DateTime"></param>
+		///// <param name="color">Сделайте значение <see langword="null"/>, чтобы получился случайный цвет</param>
+		///// <returns></returns>
+		//int CreateNewText(Panel panelToAddIn, string Text, IPAddress IP, DateTime DateTime, Color? color)
+		//{
+		//	for (int i = 0; i < UsersMessages.Length; i++)
+		//	{
+		//		if (UsersMessages[i] == null)
+		//		{
+		//			UsersMessages[i] = new UserControl1();
+		//			UsersMessages[i].DateUp = UsersMessages[0].DateUp;
+		//			UsersMessages[i].GetGeneralText = Text;
+		//			if (color == null)
+		//			{
+		//				if (AllColors.Length <= IndexForColor)
+		//				{
+		//					IndexForColor = 0;
+		//				}
+		//				while (CheckColorNoBlack())
+		//				{
+		//					if (AllColors.Length <= IndexForColor)
+		//					{
+		//						IndexForColor = 0;
+		//					}
+		//					else
+		//					{
+		//						IndexForColor++;
+		//						ColorsSkips++;
+		//					}
+		//				}
+		//				if (AllColors.Length <= IndexForColor)
+		//				{
+		//					IndexForColor = 0;
+		//				}
+		//				if (AllColors[IndexForColor] == "Transparent")
+		//					IndexForColor++;
+		//				UsersMessages[i].GetGeneralColor = Color.FromName(AllColors[IndexForColor]);
+		//				IndexForColor++;
+		//			}
+		//			else
+		//			{
+		//				UsersMessages[i].GetGeneralColor = color.Value;
+		//			}
+
+		//			UsersMessages[i].Anchor = UserFromMessage.Anchor;
+		//			UsersMessages[i].Dock = UserFromMessage.Dock;
+		//			if (UsersMessages[i].DateUp)
+		//			{
+		//				UsersMessages[i].GetIPTextUp = IP.ToString();
+		//				UsersMessages[i].GetDateTimeTextUp = DateTime.ToString();
+		//			}
+		//			else if (!UsersMessages[i].DateUp)
+		//			{
+		//				UsersMessages[i].GetIPTextDown = IP.ToString();
+		//				UsersMessages[i].GetDateTimeTextDown = DateTime.ToString();
+		//			}
+
+		//			panelToAddIn.Controls.Add(UsersMessages[i]);
+		//			UsersMessages[i].Location = new Point(UsersMessages[i - 1].Location.X, UsersMessages[i - 1].Location.Y + UsersMessages[i - 1].Size.Height);
+		//			return i;
+		//		}
+		//	}
+		//	return -1;
+		//}
+		///// <summary>
+		///// 
+		///// </summary>
+		///// <param name="panelToAddIn"></param>
+		///// <param name="Text"></param>
+		///// <param name="iP"></param>
+		///// <param name="DateTimeText"></param>
+		///// <param name="color">Сделайте значение <see langword="null"/>, чтобы получился случайный цвет</param>
+		///// <returns></returns>
+		//void CreateNewText(Panel panelToAddIn, string Text, IPAddress iP, string DateTimeText, Color? color)
+		//{
+		//	for (int i = 0; i < UsersMessages.Length; i++)
+		//	{
+		//		if (UsersMessages[i] == null)
+		//		{
+		//			UsersMessages[i] = new UserControl1();
+		//			UsersMessages[i].DateUp = UsersMessages[0].DateUp;
+		//			UsersMessages[i].GetGeneralText = Text;
+		//			if (color == null)
+		//			{
+		//				if (AllColors.Length <= IndexForColor)
+		//				{
+		//					IndexForColor = 0;
+		//				}
+		//				while (CheckColorNoBlack())
+		//				{
+		//					if (AllColors.Length <= IndexForColor)
+		//					{
+		//						IndexForColor = 0;
+		//					}
+		//					else
+		//					{
+		//						IndexForColor++;
+		//						ColorsSkips++;
+		//					}
+		//				}
+		//				if (AllColors.Length <= IndexForColor)
+		//				{
+		//					IndexForColor = 0;
+		//				}
+		//				if (AllColors[IndexForColor] == "Transparent")
+		//					IndexForColor++;
+		//				UsersMessages[i].GetGeneralColor = Color.FromName(AllColors[IndexForColor]);
+		//				IndexForColor++;
+		//			}
+		//			else
+		//			{
+		//				UsersMessages[i].GetGeneralColor = color.Value;
+		//			}
+
+		//			UsersMessages[i].Anchor = UserFromMessage.Anchor;
+		//			UsersMessages[i].Dock = UserFromMessage.Dock;
+		//			if (UsersMessages[i].DateUp)
+		//			{
+		//				UsersMessages[i].GetIPTextUp = iP.ToString();
+		//				UsersMessages[i].GetDateTimeTextUp = DateTimeText;
+		//			}
+		//			else if (!UsersMessages[i].DateUp)
+		//			{
+		//				UsersMessages[i].GetIPTextDown = iP.ToString();
+		//				UsersMessages[i].GetDateTimeTextDown = DateTimeText;
+		//			}
+
+		//			panelToAddIn.Controls.Add(UsersMessages[i]);
+		//			UsersMessages[i].Location = new Point(UsersMessages[i - 1].Location.X, UsersMessages[i - 1].Location.Y + UsersMessages[i - 1].Size.Height + 1);
+		//			break;
+		//		}
+		//	}
+		//}
+
+	}
 }
