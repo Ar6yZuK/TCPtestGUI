@@ -16,24 +16,35 @@ using System.Text.RegularExpressions;
 
 namespace ClientGUITest2
 {
-	public partial class ClientGUITest2 : Form
+	public partial class Form1 : Form
 	{
-		public ClientGUITest2()
+		public Form1()
 		{
 			InitializeComponent();
-			MycLIENT = new MyClient(this);
+			Startpointpanel4 = panel4.Location;
+
+			AllColors = Enum.GetNames(typeof(KnownColor));
+			UsersMessages[0] = UserFromMessage;
+			////panel2.AutoScrollMinSize = new Size(0, w[0].Size.Height);
+			//panel2.VerticalScroll.Enabled = false;
+			flowLayoutPanel1.VerticalScroll.LargeChange = UserFromMessage.Height;
+			flowLayoutPanel2.VerticalScroll.LargeChange = UserFromMessage.Height;
+			flowLayoutPanel1.VerticalScroll.SmallChange = UserFromMessage.Height;
+			flowLayoutPanel2.VerticalScroll.SmallChange = UserFromMessage.Height;
+			
+			//MycLIENT = new MyClient(this);
 		}
 
-		MyClient MycLIENT;
+		//MyClient MycLIENT;
 		private void button1_Click_1(object sender, EventArgs e)
 		{
 			//richTextBox1.Text = this.ToString();
 
-			MyClient.ParseAll();
+			ParseAll();
 		}
 		private void timer1_Tick(object sender, EventArgs e)
 		{
-			if (!MycLIENT.CurreTcpclient.Connected)
+			if (!tcpClients.Connected)
 			{
 				label4.Text = "No connected";
 				label4.ForeColor = Color.DarkRed;
@@ -45,27 +56,52 @@ namespace ClientGUITest2
 			}
 		}
 
-		byte[] BufferForSend = new byte[4092];
 		async private void button2_Click(object sender, EventArgs e)
 		{
-			await Task.Run(() =>
+			byte[] BufferForSend = new byte[256];
+			if (!string.IsNullOrWhiteSpace(richTextBox2.Text))
 			{
-				Invoke(new Action(() => pictureBox3.Visible = true));
-				Invoke(new Action(() => BufferForSend = Encoding.UTF8.GetBytes("▲TEXT▲" + richTextBox2.Text + "▲TEXT▲")));
-				MycLIENT.CurreTcpclient.GetStream().Write(BufferForSend, 0, BufferForSend.Length);
-				Invoke(new Action(() => pictureBox3.Visible = false));
-				Invoke(new Action(() =>
+				await Task.Run(() =>
 				{
-					if (richTextBox2.Text.Length > 0)
+					Invoke(new Action(() => pictureBox3.Visible = true));
+					Invoke(new Action(() => BufferForSend = Encoding.UTF8.GetBytes("▲TEXT▲" + richTextBox2.Text + "▲TEXT▲")));
+					Invoke(new Action(() =>
 					{
-						pictureBox2.Visible = true;
-					}
-					if (!timer2.Enabled)
+						if (UserToMessage.GetGeneralText.Length == 0)
+						{
+							UserToMessage.GetGeneralText = richTextBox2.Text;
+							if (UserToMessage.DateUp)
+							{
+								UserToMessage.GetIPTextUp = "Для: " + ((IPEndPoint)tcpClients.Client.RemoteEndPoint).Address;
+								UserToMessage.GetDateTimeTextUp = DateTime.Now.ToString();
+							}
+							else if (!UserToMessage.DateUp)
+							{
+								UserToMessage.GetIPTextDown = "Для: " + ((IPEndPoint)tcpClients.Client.RemoteEndPoint).Address;
+								UserToMessage.GetDateTimeTextDown = DateTime.Now.ToString();
+							}
+						}
+						else
+						{
+							CreateNewText(flowLayoutPanel1, richTextBox2.Text, "Для: " + ((IPEndPoint)tcpClients.Client.RemoteEndPoint).Address.ToString(), DateTime.Now, null);
+						}
+					}));
+
+					tcpClients.GetStream().Write(BufferForSend, 0, BufferForSend.Length);
+					Invoke(new Action(() => pictureBox3.Visible = false));
+					Invoke(new Action(() =>
 					{
-						timer2.Enabled = true;
-					}
-				}));
-			});
+						if (!string.IsNullOrWhiteSpace(richTextBox2.Text))
+						{
+							pictureBox2.Visible = true;
+						}
+						if (!timer2.Enabled)
+						{
+							timer2.Enabled = true;
+						}
+					}));
+				});
+			}
 		}
 
 		private void timer2_Tick(object sender, EventArgs e)
@@ -125,7 +161,7 @@ namespace ClientGUITest2
 				string TestStr = Encoding.UTF8.GetString(CheckNameCountFileByte);
 				Invoke(new Action(() => richTextBox3.Text = CurretNameFile));
 				Invoke(new Action(() => richTextBox3.SelectionStart = richTextBox3.Text.Length));
-				
+
 				//MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
 				Thread.Sleep(1);
 
@@ -138,9 +174,9 @@ namespace ClientGUITest2
 
 				try
 				{
-					MycLIENT.CurreTcpclient.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
+					tcpClients.GetStream().Write(CheckNameCountFileByte, 0, CheckNameCountFileByte.Length);
 					//Task.Delay(1000);
-					MycLIENT.CurreTcpclient.Client.SendFile(FileSend, null, null, TransmitFileOptions.UseDefaultWorkerThread);
+					tcpClients.Client.SendFile(FileSend, null, null, TransmitFileOptions.UseDefaultWorkerThread);
 					ReadLog("Файл отправлен: " + CurretNameFile);
 				}
 				catch (Exception ex)
@@ -148,12 +184,12 @@ namespace ClientGUITest2
 					if (ex is SocketException || ex is IOException)
 					{
 						ReadLog("Сбой при отправке файла: " + CurretNameFile);
-                    }
-                    else
-                    {
+					}
+					else
+					{
 						throw;
-                    }
-					//Application.Restart();
+					}
+					Application.Restart();
 				}
 				//Thread.Sleep(500);
 				//MycLIENT.CurreTcpclient.GetStream().Write(Encoding.UTF8.GetBytes("▼"), 0, 3);
@@ -196,7 +232,7 @@ namespace ClientGUITest2
 			{
 				this.Text += " — " + Directory.GetCurrentDirectory();
 			}
-			if(Properties.Settings.Default.SavedIP.Length > 0)
+			if (Properties.Settings.Default.SavedIP.Length > 0)
 			{
 				textBox1.Text = Properties.Settings.Default.SavedIP;
 				textBox2.Text = Properties.Settings.Default.SavedPORT;
@@ -205,7 +241,7 @@ namespace ClientGUITest2
 
 		private void button3_Click(object sender, EventArgs e)
 		{
-			if(openFileDialog1.ShowDialog() == DialogResult.OK)
+			if (openFileDialog1.ShowDialog() == DialogResult.OK)
 			{
 				button4.Enabled = true;
 				FileSend = openFileDialog1.FileName;
@@ -254,83 +290,59 @@ namespace ClientGUITest2
 		{
 			Properties.Settings.Default.Save();
 		}
-	}
-	class MyClient
-	{
-		public static string error = "Не удается прочитать данные из транспортного соединения: Попытка установить соединение была безуспешной," +
+
+		public   string error = "Не удается прочитать данные из транспортного соединения: Попытка установить соединение была безуспешной," +
 			" т.к. от другого компьютера за требуемое время не получен нужный отклик," +
 			" или было разорвано уже установленное соединение из-за неверного отклика уже подключенного компьютера.";
-		static ClientGUITest2 formmm1;
-		static TcpClient tcpClients;
-		static IPAddress iP;
-		static int port;
-		public int Port
+		// ClientGUITest2 formmm1;
+		 TcpClient tcpClients;
+		 IPAddress iP;
+		 int port;
+		//public int Port
+		//{
+		//	get { return port; }
+		//}
+		//public IPAddress IP
+		//{
+		//	get { return iP; }
+		//}
+		//public TcpClient CurreTcpclient
+		//{
+		//	get
+		//	{
+		//		return tcpClients;
+		//	}
+		//}
+		public  void ParseAll()
 		{
-			get { return port; }
-		}
-		public IPAddress IP
-		{
-			get { return iP; }
-		}
-		public ClientGUITest2 FORM1
-		{
-			get
-			{
-				return formmm1;
-			}
-			protected set
-			{
-				formmm1 = value;
-			}
-		}
-		public TcpClient CurreTcpclient
-		{
-			get
-			{
-				return tcpClients;
-			}
-		}
-		public MyClient(ClientGUITest2 _form1)
-		{
-			FORM1 = _form1;
-		}
-		~MyClient()
-		{
-			if (tcpClients != null)
-			{
-				tcpClients.Close();
-			}
-		}
-		public static void ParseAll()
-		{
-			if (IPAddress.TryParse(formmm1.textBox1.Text, out iP))
+			if (IPAddress.TryParse(textBox1.Text, out iP))
 			{
 				try
 				{
-					port = Convert.ToInt32(formmm1.textBox2.Text);
+					port = Convert.ToInt32(textBox2.Text);
 					if (port > 0 && port < 65535)
 					{
-						ConnectToServer(iP, port, formmm1);
+						ConnectToServer(iP, port);
 					}
 					else
 					{
 						Console.Beep(40, 300);
-						formmm1.timer1.Enabled = false;
+						timer1.Enabled = false;
 					}
 				}
 				catch (FormatException)
 				{
 					Console.Beep(40, 300);
-					formmm1.timer1.Enabled = false;
+					timer1.Enabled = false;
 				}
 			}
 			else
 			{
 				Console.Beep(40, 300);
-				formmm1.timer1.Enabled = false;
+				timer1.Enabled = false;
 			}
 		}
-		async static public void ConnectToServer(IPAddress iP, int port, ClientGUITest2 Form1)
+		async  public void ConnectToServer(IPAddress iP, int port)
 		{
 			TcpClient tcpClient = new TcpClient();
 
@@ -338,38 +350,39 @@ namespace ClientGUITest2
 			{
 				try
 				{
-					formmm1.Invoke(new Action(() => formmm1.label4.Visible = false));
-					formmm1.Invoke(new Action(() => formmm1.pictureBox4.Visible = true));
+					Invoke(new Action(() => label4.Visible = false));
+					Invoke(new Action(() => pictureBox4.Visible = true));
 					tcpClient.Connect(iP, port);
+
 					ThreadAcceptMessage(tcpClient);
 					Console.Beep(4000, 150);
 
-					Properties.Settings.Default.SavedIP = formmm1.textBox1.Text;
-					Properties.Settings.Default.SavedPORT = formmm1.textBox2.Text;
-					formmm1.Invoke(new Action(() => formmm1.button3.Enabled = true));
-					formmm1.Invoke(new Action(() => formmm1.textBox1.ReadOnly = true));
-					formmm1.Invoke(new Action(() => formmm1.textBox2.ReadOnly = true));
-					//formmm1.Invoke(new Action(() => formmm1.pictureBox1.Visible = true));
-					formmm1.Invoke(new Action(() => formmm1.button2.Visible = true));
-					formmm1.Invoke(new Action(() => formmm1.pictureBox4.Visible = false));
-					formmm1.Invoke(new Action(() => formmm1.button1.Visible = false));
-					formmm1.Invoke(new Action(() => formmm1.label4.Visible = true));
-					formmm1.Invoke(new Action(() => formmm1.timer1.Enabled = true));
-					formmm1.Invoke(new Action(() => Form1.label4.Text = "Connected"));
-					formmm1.Invoke(new Action(() => Form1.label4.ForeColor = Color.Lime));
-					formmm1.Invoke(new Action(() => Form1.label4.Refresh()));
+					Properties.Settings.Default.SavedIP = textBox1.Text;
+					Properties.Settings.Default.SavedPORT = textBox2.Text;
+					Invoke(new Action(() => button3.Enabled = true));
+					Invoke(new Action(() => textBox1.ReadOnly = true));
+					Invoke(new Action(() => textBox2.ReadOnly = true));
+					//Invoke(new Action(() => pictureBox1.Visible = true));
+					Invoke(new Action(() => button2.Visible = true));
+					Invoke(new Action(() => pictureBox4.Visible = false));
+					Invoke(new Action(() => button1.Visible = false));
+					Invoke(new Action(() => label4.Visible = true));
+					Invoke(new Action(() => timer1.Enabled = true));
+					Invoke(new Action(() => label4.Text = "Connected"));
+					Invoke(new Action(() => label4.ForeColor = Color.Lime));
+					Invoke(new Action(() => label4.Refresh()));
 					tcpClients = tcpClient;
 				}
 				catch (SocketException)
 				{
-					formmm1.Invoke(new Action(() => formmm1.button3.Enabled = false));
-					formmm1.Invoke(new Action(() => formmm1.pictureBox4.Visible = false));
-					formmm1.Invoke(new Action(() => formmm1.button1.Visible = true));
-					formmm1.Invoke(new Action(() => Form1.label4.Text = "ERROR"));
-					formmm1.Invoke(new Action(() => formmm1.label4.Visible = true));
-					formmm1.Invoke(new Action(() => Form1.label4.ForeColor = Color.Red));
-					formmm1.Invoke(new Action(() => Form1.label4.Refresh()));
-					formmm1.Invoke(new Action(() => formmm1.timer1.Enabled = false));
+					Invoke(new Action(() => button3.Enabled = false));
+					Invoke(new Action(() => pictureBox4.Visible = false));
+					Invoke(new Action(() => button1.Visible = true));
+					Invoke(new Action(() => label4.Text = "ERROR"));
+					Invoke(new Action(() => label4.Visible = true));
+					Invoke(new Action(() => label4.ForeColor = Color.Red));
+					Invoke(new Action(() => label4.Refresh()));
+					Invoke(new Action(() => timer1.Enabled = false));
 					Console.Beep(40, 300);
 					return;
 				}
@@ -379,8 +392,7 @@ namespace ClientGUITest2
 			//threadForAcceptSend.IsBackground = true;
 			//threadForAcceptSend.Start(tcpClient);
 		}
-
-		async public static void ThreadAcceptMessage(object StateInfo)
+		async public  void ThreadAcceptMessage(object StateInfo)
 		{
 			TcpClient tcpClient = (TcpClient)StateInfo;
 			byte[] Buffer = new byte[256];
@@ -438,8 +450,8 @@ namespace ClientGUITest2
 							if (newBuffer.Length > 0)
 							{
 								file2.Write(newBuffer, 0, newBuffer.Length);
-								formmm1.Invoke(new Action(() => formmm1.textBox3.Text += " " + newBuffer.Length));
-								formmm1.Invoke(new Action(() => formmm1.textBox3.SelectionStart = formmm1.textBox3.Text.Length));
+								Invoke(new Action(() => textBox3.Text += " " + newBuffer.Length));
+								Invoke(new Action(() => textBox3.SelectionStart = textBox3.Text.Length));
 							}
 							file2.Close();
 							file1 = File.OpenWrite(AcceptedFiles + NameFileStr);
@@ -455,68 +467,68 @@ namespace ClientGUITest2
 							{
 								CountIntWrite = tcpClient.Client.Receive(BufferForFile, 0, 5242880, SocketFlags.None);
 								stopwatch.Start();
-								formmm1.Invoke(new Action(() => formmm1.textBox3.Text += " " + CountIntWrite));
-								formmm1.Invoke(new Action(() => formmm1.textBox3.SelectionStart = formmm1.textBox3.Text.Length));
+								Invoke(new Action(() => textBox3.Text += " " + CountIntWrite));
+								Invoke(new Action(() => textBox3.SelectionStart = textBox3.Text.Length));
 
 								file1.Write(BufferForFile, 0, CountIntWrite);
 
 								CountInTheFileInt += CountIntWrite;
 								file1.Close();
-								formmm1.Invoke(new Action(() =>
+								Invoke(new Action(() =>
 								{
 									if (bo)
 									{
 										double aa = GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds);
-										formmm1.label7.Text = aa.ToString("0.0");
+										label7.Text = aa.ToString("0.0");
 										bo = false;
 									}
 									if (GetKBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds) >= 1000)
 									{
-										formmm1.label5.Text = ((int)GetMBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString() + " МБ/с ꟷ " + ((GetMBInTheFile(CountInTheFileInt))).ToString("0.0") + "/" + ((CountInt / 1024.0 / 1024.0)).ToString("0.0") + " МБ, осталось " + (GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString("0.0") + " сек.";
+										label5.Text = ((int)GetMBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString() + " МБ/с ꟷ " + ((GetMBInTheFile(CountInTheFileInt))).ToString("0.0") + "/" + ((CountInt / 1024.0 / 1024.0)).ToString("0.0") + " МБ, осталось " + (GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString("0.0") + " сек.";
 									}
 									else
 									{
-										formmm1.label5.Text = ((int)GetKBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString() + " КБ/с ꟷ " + ((GetMBInTheFile(CountInTheFileInt))).ToString("0.0") + "/" + ((CountInt / 1024.0 / 1024.0)).ToString("0.0") + " МБ, осталось " + (GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString("0.0") + " сек.";
+										label5.Text = ((int)GetKBPerSecond(CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString() + " КБ/с ꟷ " + ((GetMBInTheFile(CountInTheFileInt))).ToString("0.0") + "/" + ((CountInt / 1024.0 / 1024.0)).ToString("0.0") + " МБ, осталось " + (GetLastSeconds(CountInt, CountInTheFileInt, stopwatch.Elapsed.TotalSeconds)).ToString("0.0") + " сек.";
 									}
 									if (stopwatch.Elapsed.TotalMinutes >= 1)
 									{
-										formmm1.label6.Text = "Минут прошло:" + stopwatch.Elapsed.TotalMinutes.ToString("0.0");
+										label6.Text = "Минут прошло:" + stopwatch.Elapsed.TotalMinutes.ToString("0.0");
 									}
-									else if(stopwatch.Elapsed.TotalMinutes < 1)
+									else if (stopwatch.Elapsed.TotalMinutes < 1)
 									{
-										formmm1.label6.Text = "Секунд прошло:" + stopwatch.Elapsed.TotalSeconds.ToString("0.0");
+										label6.Text = "Секунд прошло:" + stopwatch.Elapsed.TotalSeconds.ToString("0.0");
 									}
 									//textBox6.Text = stopwatch.Elapsed.TotalSeconds.ToString("0.0"); // Секунд прошло
-									//formmm1.label6.Text = (CountInTheFileInt / 1024.0/* / 1024.0*/ / stopwatch.Elapsed.TotalSeconds).ToString("0000") + " КБ/с"; // Скорость в секунду MB/s
+									//label6.Text = (CountInTheFileInt / 1024.0/* / 1024.0*/ / stopwatch.Elapsed.TotalSeconds).ToString("0000") + " КБ/с"; // Скорость в секунду MB/s
 									//label5.Font = Control.DefaultFont;
-									//formmm1.label7.Text = " ꟷ " + ((/*CountInt - */CountInTheFileInt) / 1024.0 / 1024.0).ToString("0.000") + "/МБ,"; // Сколько осталось MB
-									//formmm1.label8.Text = "осталось " + ((int)(((CountInt - CountInTheFileInt) / 1024.0 / 1024.0) / (CountInTheFileInt / 1024.0 / 1024.0 / stopwatch.Elapsed.TotalSeconds))).ToString() + "сек."; // Сколько времени осталось
+									//label7.Text = " ꟷ " + ((/*CountInt - */CountInTheFileInt) / 1024.0 / 1024.0).ToString("0.000") + "/МБ,"; // Сколько осталось MB
+									//label8.Text = "осталось " + ((int)(((CountInt - CountInTheFileInt) / 1024.0 / 1024.0) / (CountInTheFileInt / 1024.0 / 1024.0 / stopwatch.Elapsed.TotalSeconds))).ToString() + "сек."; // Сколько времени осталось
 								}));
 
 
 								try
 								{
 									Propgress1 = 100 / (CountInt / (double)CountInTheFileInt);
-									formmm1.Invoke(new Action(() =>
+									Invoke(new Action(() =>
 									{
-										formmm1.progressBar1.Value = (int)Propgress1;
-										formmm1.label10.Text = ((int)Propgress1).ToString() + "%";
+										progressBar1.Value = (int)Propgress1;
+										label10.Text = ((int)Propgress1).ToString() + "%";
 									}));
 								}
 								catch (System.Exception ex)
 								{
 									if (ex is DivideByZeroException)
 									{
-										formmm1.Invoke(new Action(() => formmm1.progressBar1.Value = (int)Propgress1));
+										Invoke(new Action(() => progressBar1.Value = (int)Propgress1));
 									}
 									else if (ex is System.ArgumentOutOfRangeException)
 									{
 										byte[] BufferForError = Encoding.UTF8.GetBytes("▲TEXT▲" + "Не нажимай на кнопку отправить файл несколько раз, пока файл не пришел!" + "▲TEXT▲");
 										tcpClient.GetStream().Write(BufferForError, 0, BufferForError.Length);
-										formmm1.Invoke(new Action(() =>
+										Invoke(new Action(() =>
 										{
-											formmm1.progressBar1.Value = 0;
-											formmm1.label10.Text = 0.ToString() + "%";
+											progressBar1.Value = 0;
+											label10.Text = 0.ToString() + "%";
 										}));
 									}
 									else
@@ -534,17 +546,41 @@ namespace ClientGUITest2
 								file1 = File.Open(AcceptedFiles + NameFileStr, FileMode.Append);
 							}
 							stopwatch.Stop();
-							formmm1.ReadLog("Файл принят: " + NameFileStr);
+							ReadLog("Файл принят: " + NameFileStr);
 							//MessageBox.Show("Файл принят за " + stopwatch.Elapsed.Minutes.ToString() + " минут " + stopwatch.Elapsed.Seconds.ToString() + " секунд " + stopwatch.Elapsed.Milliseconds.ToString() + " миллисекунд");
 							file1.Close();
 						}
-						else if(StrBuffer.Length > 0 && TextReceived.Count == 2)
+						else if (StrBuffer.Length > 0 && TextReceived.Count == 2)
 						{
 							CheckNameCountFileStr2 = StrBuffer.Remove(0, TextReceived[0].Index + TextReceived[0].Length);
 							newBufferStr = CheckNameCountFileStr2.Remove(TextReceived[1].Index - TextReceived[0].Length, TextReceived[0].Length);
 
-							formmm1.Invoke(new Action(() => formmm1.richTextBox1.Text = newBufferStr));
-							formmm1.ReadLog(StrBuffer);
+							Invoke(new Action(() => {
+								if (!string.IsNullOrWhiteSpace(newBufferStr))
+								{
+									//UserFromMessage.GetGeneralText
+									if (UserFromMessage.GetGeneralText.Length == 0)
+									{
+										UserFromMessage.GetGeneralText = newBufferStr;
+										if (UserFromMessage.DateUp)
+										{
+											UserFromMessage.GetIPTextUp = "От: " + ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
+											UserFromMessage.GetDateTimeTextUp = DateTime.Now.ToString();
+										}
+										else if (!UserFromMessage.DateUp)
+										{
+											UserFromMessage.GetIPTextDown = "От: " + ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
+											UserFromMessage.GetDateTimeTextDown = DateTime.Now.ToString();
+										}
+									}
+									else
+									{
+										CreateNewText(flowLayoutPanel2, newBufferStr, "От " + ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address, DateTime.Now, null);
+									}
+
+									ReadLog(newBufferStr);
+								}
+							}));
 						}
 						else
 						{
@@ -561,7 +597,7 @@ namespace ClientGUITest2
 				{
 					if (ex is IOException || ex is SocketException || ex.Message == "KTOTO HE TTPABUJLHO UCTTOJLSYET TTPOrPAMMY")
 					{
-						if(file1 != null)
+						if (file1 != null)
 						{
 							file1.Close();
 						}
@@ -575,7 +611,7 @@ namespace ClientGUITest2
 				}
 
 			});
-			
+
 			double GetMBPerSecond(int CountInTheFileInt, double TotalSeconds)
 			{
 				return (CountInTheFileInt / 1024.0 / 1024.0 / TotalSeconds);
@@ -630,5 +666,104 @@ namespace ClientGUITest2
 			//	return NameFile;
 			//}
 		}
-	}
+
+		UserControl1[] UsersMessages = new UserControl1[341];
+		int IndexForColor = 0;
+		string[] AllColors;
+		int ColorsSkips = 0;
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="panelToAddIn"></param>
+		/// <param name="Text"></param>
+		/// <param name="iP"></param>
+		/// <param name="DateTime"></param>
+		/// <param name="color">Сделайте значение <see langword="null"/>, чтобы получился случайный цвет</param>
+		/// <returns></returns>
+		int CreateNewText(Panel panelToAddIn, string Text, string iP, DateTime DateTime, Color? color)
+		{
+			for (int i = 0; i < UsersMessages.Length; i++)
+			{
+				if (UsersMessages[i] == null)
+				{
+					UsersMessages[i] = new UserControl1();
+					UsersMessages[i].DateUp = UsersMessages[0].DateUp;
+					UsersMessages[i].GetGeneralText = Text;
+
+					if (color == null)
+					{
+						if (AllColors.Length <= IndexForColor)
+						{
+							IndexForColor = 0;
+						}
+						while (CheckColorNoBlack())
+						{
+							if (AllColors.Length <= IndexForColor)
+							{
+								IndexForColor = 0;
+							}
+							else
+							{
+								IndexForColor++;
+								ColorsSkips++;
+							}
+						}
+						if (AllColors.Length <= IndexForColor)
+						{
+							IndexForColor = 0;
+						}
+						if (AllColors[IndexForColor] == "Transparent")
+							IndexForColor++;
+
+						UsersMessages[i].GetGeneralColor = Color.FromName(AllColors[IndexForColor]);
+						IndexForColor++;
+					}
+					else
+					{
+						UsersMessages[i].GetGeneralColor = color.Value;
+					}
+
+					UsersMessages[i].Anchor = UserFromMessage.Anchor;
+					UsersMessages[i].Dock = UserFromMessage.Dock;
+					if (UsersMessages[i].DateUp)
+					{
+						UsersMessages[i].GetIPTextUp = iP;
+						UsersMessages[i].GetDateTimeTextUp = DateTime.ToString();
+					}
+					else if (!UsersMessages[i].DateUp)
+					{
+						UsersMessages[i].GetIPTextDown = iP;
+						UsersMessages[i].GetDateTimeTextDown = DateTime.ToString();
+					}
+
+					panelToAddIn.Controls.Add(UsersMessages[i]);
+					UsersMessages[i].Location = new Point(UsersMessages[i - 1].Location.X, UsersMessages[i - 1].Location.Y + UsersMessages[i - 1].Size.Height + 1);
+					panelToAddIn.ScrollControlIntoView(UsersMessages[i]);
+					return i;
+				}
+			}
+			return -1;
+		}
+		bool CheckColorNoBlack()
+		{
+			Color color1 = Color.FromName(AllColors[IndexForColor]);
+			Color color2 = Color.FromArgb(255, 0, 0, 0);
+			return color1.ToArgb() == color2.ToArgb();
+		}
+		Point Startpointpanel4;
+		private void flowLayoutPanel2_ControlAdded(object sender, ControlEventArgs e)
+		{
+			if ((panel4.Location.Y < Startpointpanel4.Y + UserFromMessage.Size.Height) && !Startpointpanel4.IsEmpty)
+			{
+				panel4.Location = new Point(panel4.Location.X, panel4.Location.Y + UserFromMessage.Size.Height);
+			}
+			//tableLayoutPanel3.Size = new Size(tableLayoutPanel3.Size.Width, tableLayoutPanel3.Size.Height + UserFromMessage.Height);
+		}
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+			CreateNewText(flowLayoutPanel1, string.Concat(Enumerable.Repeat("S", 255)), "Для: " + "255.255.255.255", DateTime.Now, null);
+			CreateNewText(flowLayoutPanel2, string.Concat(Enumerable.Repeat("S", 255)), "От:  " + "255.255.255.255", DateTime.Now, null);
+		}
+    }
 }

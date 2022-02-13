@@ -16,7 +16,7 @@ namespace ClientGUITest2
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ClientGUITest2());
+            Application.Run(new Form1());
         }
     }
 }
